@@ -1,13 +1,17 @@
-import React, { useRef } from 'react'
+import React, { useRef, useContext, useState } from 'react'
 import { useDrag, useDrop } from 'react-dnd';
 import { Container, Label } from './styled';
+import BoardContext from '../Board/Context';
 
+import { Modal, ModalBody, ModalHeader } from 'reactstrap'
 
-function Card({ data, index }) {
+function Card({ data, index, listIndex }) {
     const ref = useRef();
 
+    const { move } = useContext(BoardContext);
+
     const [{ isDragging }, dragRef] = useDrag({
-        item: { id: data.id, index, content: data.content },
+        item: { id: data.id, index, listIndex, content: data.content },
         type: 'CARD',
         collect: monitor => ({
             isDragging: monitor.isDragging(),
@@ -17,34 +21,68 @@ function Card({ data, index }) {
         accept: 'CARD',
         hover(item, monitor) {
 
+            const draggedListIndex = item.listIndex;
+            const targetListIndex = listIndex;
+
             const draggedIndex = item.index;
             const targetIndex = index;
 
-            if (draggedIndex === targetIndex) {
+            if (draggedIndex === targetIndex && draggedListIndex === targetListIndex) {
                 return;
             }
 
-            console.log(item.index, index);
-
             const targetSize = ref.current.getBoundingClientRect();
+            const targetCenter = (targetSize.bottom - targetSize.top) / 2;
+            const draggedOffset = monitor.getClientOffset();
+            const draggedTop = draggedOffset.y - targetSize.top;
 
-            console.log(targetSize)
+            if (draggedIndex < targetIndex && draggedTop < targetCenter) {
+                return;
+            }
+
+            if (draggedIndex > targetIndex && draggedTop > targetCenter) {
+                return;
+            }
+
+            move(draggedListIndex, draggedIndex, targetIndex, targetListIndex)
+
+
+            item.index = targetIndex;
+            item.listIndex = targetListIndex;
+            // console.log(draggedTop);
         }
     })
 
-    dragRef(dropRef(ref))
+    const [modal, setModal] = useState();
+
+    const toggle = () => setModal(!modal);
+
+    const [card, setCard] = useState([]);
+
+    function onChangeCardData(data) {
+        setCard(data)
+    }
+
+    dragRef(dropRef(ref));
+
     return (
-        <Container ref={ref} isDragging={isDragging}>
-            <header>
-                {data.labels.map(label => <Label key={label} color={label} />)}
+        <>
+            <Container ref={ref} isDragging={isDragging}  onClick={toggle}> 
+                <header>
+                    {data.labels.map(label => <Label key={label} color={label} />)}
 
+                </header>
 
-            </header>
+                <p>{data.content}</p>
 
-            <p>{data.content}</p>
+                {data.user && <img src={data.user} alt="avatar" />}
+            </Container>
 
-            {data.user && <img src={data.user} alt="avatar" />}
-        </Container>
+            <Modal isOpen={modal} toggle={toggle} >
+
+                hgjhgjg
+            </Modal>
+        </>
     )
 }
 
